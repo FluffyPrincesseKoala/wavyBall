@@ -23,11 +23,11 @@ const camera = new THREE.PerspectiveCamera(
 )
 
 const params = {
-  red: 1.0,
-  green: 1.0,
-  blue: 1.0,
+  red: 0.3,
+  green: 0.0,
+  blue: 0.2,
   threshold: 0.3,
-  strength: 0.5,
+  strength: 0.11,
   radius: 0.8,
 }
 
@@ -55,9 +55,9 @@ camera.lookAt(0, 0, 0)
 const uniforms = {
   u_time: { type: "f", value: 0.0 },
   u_frequency: { type: "f", value: 0.0 },
-  u_red: { type: "f", value: 1.0 },
-  u_green: { type: "f", value: 1.0 },
-  u_blue: { type: "f", value: 1.0 },
+  u_red: { type: "f", value: params.red },
+  u_green: { type: "f", value: params.green },
+  u_blue: { type: "f", value: params.blue },
   u_resolution: {
     type: "v2",
     value: new THREE.Vector2(window.innerWidth, window.innerHeight),
@@ -71,7 +71,7 @@ const mat = new THREE.ShaderMaterial({
   fragmentShader: sphereFragmentShader,
 })
 
-const geo = new THREE.IcosahedronGeometry(4, 15)
+const geo = new THREE.IcosahedronGeometry(4, 10)
 const mesh = new THREE.Mesh(geo, mat)
 scene.add(mesh)
 mesh.material.wireframe = true
@@ -93,20 +93,58 @@ for (let i = 0; i < 100; i++) {
 }
 scene.add(stars)
 
-// add plane
-const planeGeo = new THREE.PlaneGeometry(30, 30, 80, 80)
+// add planes to the scene
+
+const planeGeo = new THREE.PlaneGeometry(40, 40, 30, 30)
 const planeMat = new THREE.ShaderMaterial({
   uniforms,
   vertexShader: planeVertexShader,
   fragmentShader: planeFragmentShader,
 })
-// planeMat.transparent = true
-// planeMat.opacity = 0.5
+planeMat.transparent = true
+planeMat.opacity = 0.1
 planeMat.wireframe = true
-const plane = new THREE.Mesh(planeGeo, planeMat)
-plane.rotation.x = Math.PI / 2
-plane.position.set(0, -10, 0)
-scene.add(plane)
+
+const planes = {
+  bottom: undefined,
+  top: undefined,
+  left: undefined,
+  right: undefined,
+  back: undefined,
+  front: undefined,
+}
+// create 6 planes to make a box
+planes.bottom = new THREE.Mesh(planeGeo, planeMat) // bottom
+planes.bottom.rotation.x = Math.PI / 2
+planes.bottom.position.set(0, -20, 0)
+
+planes.top = new THREE.Mesh(planeGeo, planeMat) // top
+planes.top.rotation.x = -Math.PI / 2
+planes.top.position.set(0, 20, 0)
+
+planes.left = new THREE.Mesh(planeGeo, planeMat) // left
+planes.left.rotation.y = Math.PI / 2
+planes.left.position.set(-20, 0, 0)
+
+planes.right = new THREE.Mesh(planeGeo, planeMat) // right
+planes.right.rotation.y = -Math.PI / 2
+planes.right.position.set(20, 0, 0)
+
+planes.back = new THREE.Mesh(planeGeo, planeMat) // back
+planes.back.rotation.y = Math.PI
+planes.back.position.set(0, 0, -20)
+
+planes.front = new THREE.Mesh(planeGeo, planeMat) // front
+planes.front.position.set(0, 0, 20)
+
+const planeGroup = new THREE.Group()
+for (const plane in planes) {
+  planeGroup.add(planes[plane])
+}
+// add a center point to the scene
+const center = new THREE.Vector3(0, 0, 0);
+planeGroup.position.copy(center);
+scene.add(planeGroup);
 
 // const listener = new THREE.AudioListener()
 // camera.add(listener)
@@ -197,19 +235,20 @@ document.addEventListener("mousemove", function (e) {
 mesh.rotation.x = Math.PI
 const clock = new THREE.Clock()
 function animate() {
-  // mesh.rotation.x += 0.001 + mouseY * 0.001;
-  // mesh.rotation.y += 0.001 + mouseX * 0.001;
   uniforms.u_mouse.value.x = mouseX
   uniforms.u_mouse.value.y = mouseY
   uniforms.u_time.value = clock.getElapsedTime()
   if (analyser) {
     const dataArray = new Uint8Array(analyser.frequencyBinCount)
     analyser.getByteFrequencyData(dataArray)
-    // console.log(dataArray);
     const averageFrequency =
       dataArray.reduce((a, b) => a + b, 0) / dataArray.length
     uniforms.u_frequency.value = averageFrequency
   }
+
+  // rotate planes around the scene
+  planeGroup.rotation.y -= (0.0001 + mouseX * 0.001)
+  planeGroup.rotation.x -= (0.0001 + mouseY * 0.001)
 
   camera.position.x += (mouseX - camera.position.x) * 0.05
   camera.position.y += (-mouseY - camera.position.y) * 0.5
@@ -224,4 +263,29 @@ window.addEventListener("resize", function () {
   camera.updateProjectionMatrix()
   renderer.setSize(window.innerWidth, window.innerHeight)
   bloomComposer.setSize(window.innerWidth, window.innerHeight)
+})
+
+window.addEventListener("keydown", function (e) {
+  if (e.key === "r") {
+    // reset camera position
+    camera.position.set(0, -2, 14)
+    camera.lookAt(0, 0, 0)
+    // reset bloom settings
+    params.threshold = 0.3
+    params.strength = 0.5
+    params.radius = 0.8
+    bloomPass.threshold = params.threshold
+    bloomPass.strength = params.strength
+    bloomPass.radius = params.radius
+
+    // reset colors
+    params.red = 0.3
+    params.green = 0.0
+    params.blue = 0.2
+
+    // reset planes rotation
+    planeGroup.rotation.x = 0
+    planeGroup.rotation.y = 0
+
+  }
 })
