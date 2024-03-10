@@ -247,8 +247,15 @@ function animate() {
   }
 
   // rotate planes around the scene
-  planeGroup.rotation.y -= (0.0001 + mouseX * 0.001)
-  planeGroup.rotation.x -= (0.0001 + mouseY * 0.001)
+  planeGroup.rotation.y -= (0.00001 + mouseX * 0.0005)
+  planeGroup.rotation.x -= (0.00001 + mouseY * 0.0005)
+
+  // rotate the sphere
+  mesh.rotation.x -= 0.0001 + mouseX * 0.0005
+  mesh.rotation.y -= 0.0001 + mouseY * 0.0005
+  mesh.rotation.z -= 0.0001 + mouseY * mouseX * 0.0005
+
+
 
   camera.position.x += (mouseX - camera.position.x) * 0.05
   camera.position.y += (-mouseY - camera.position.y) * 0.5
