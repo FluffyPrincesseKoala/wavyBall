@@ -71,7 +71,7 @@ const mat = new THREE.ShaderMaterial({
   fragmentShader: sphereFragmentShader,
 })
 
-const geo = new THREE.IcosahedronGeometry(4, 10)
+const geo = new THREE.IcosahedronGeometry(4, 15)
 const mesh = new THREE.Mesh(geo, mat)
 scene.add(mesh)
 mesh.material.wireframe = true
