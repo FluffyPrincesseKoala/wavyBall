@@ -5,8 +5,13 @@ uniform float u_time;
 uniform float u_frequency;
 
 #include ../utils/pnoise.glsl
+varying vec2 vUv;
+varying vec3 vPosition;
 
 void main() {
+    // calculate the uv coordinates
+    vUv = vec2(uv.x, uv.y);
+    vPosition = position;
     float noise = 3.0 * pnoise(position + u_time, vec3(1.0));
     // float noise2 = 3.0 * pnoise(position + u_time, vec3(10.0));
     float noise2 = 3.0 * noised(position).z;
