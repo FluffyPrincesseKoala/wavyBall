@@ -1,14 +1,15 @@
 import * as THREE from "three"
-import { GUI } from "dat.gui"
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer"
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass"
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass"
 import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass"
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls"
 
-import sphereVertexShader from "./glsl/sphere/vert.glsl"
-import sphereFragmentShader from "./glsl/sphere/frag.glsl"
-import planeVertexShader from "./glsl/plane/vert.glsl"
-import planeFragmentShader from "./glsl/plane/frag.glsl"
+import Ball from "./src/ball"
+import initGui from "./src/gui"
+import initPlanes from "./src/planes"
+
+import currentSettings from "./settings.json"
 
 const renderer = new THREE.WebGLRenderer({ antialias: true })
 renderer.setSize(window.innerWidth, window.innerHeight)
@@ -22,13 +23,15 @@ const camera = new THREE.PerspectiveCamera(
   1000
 )
 
+const settings = currentSettings
+
 const params = {
-  red: 0.3,
-  green: 0.0,
-  blue: 0.2,
-  threshold: 0.3,
-  strength: 0.11,
-  radius: 0.8,
+  red: 1.0,
+  green: 1.0,
+  blue: 1.0,
+  threshold: currentSettings.bloomPass.threshold,
+  strength: currentSettings.bloomPass.strength,
+  radius: currentSettings.bloomPass.radius,
 }
 
 renderer.outputColorSpace = THREE.SRGBColorSpace
@@ -49,8 +52,8 @@ bloomComposer.addPass(bloomPass)
 const outputPass = new OutputPass()
 bloomComposer.addPass(outputPass)
 
-camera.position.set(0, -2, 14)
-camera.lookAt(0, 0, 0)
+camera.position.set(settings.camera.position.x, settings.camera.position.y, settings.camera.position.z)
+camera.rotation.set(settings.camera.rotation.x, settings.camera.rotation.y, settings.camera.rotation.z)
 
 const uniforms = {
   u_time: { type: "f", value: 0.0 },
@@ -65,16 +68,221 @@ const uniforms = {
   u_mouse: { type: "v2", value: new THREE.Vector2() },
 }
 
-const mat = new THREE.ShaderMaterial({
-  uniforms,
-  vertexShader: sphereVertexShader,
-  fragmentShader: sphereFragmentShader,
-})
+const ball = new Ball(scene, uniforms)
 
-const geo = new THREE.IcosahedronGeometry(4, 15)
-const mesh = new THREE.Mesh(geo, mat)
-scene.add(mesh)
-mesh.material.wireframe = true
+const textureLoader = new THREE.TextureLoader()
+const texture = textureLoader.load("public/fond-texture-bois.jpg")
+
+// create a coffin door
+let geometry = new THREE.BufferGeometry();
+
+// Define vertices of the door
+const vertices = [
+  // top top
+  -0.8, 0, -0.7, // Top-left
+  0.8, 0, -0.7, // Top-right
+  1.6, 0, 1, // Bottom-right
+  -1.6, 0, 1, // Bottom-left
+  // top bottom (connected to the top Bottom-right & Bottom-left)
+  -1.6, 0, 1, // Top-left
+  1.6, 0, 1, // Top-right
+  0.6, 0, 4.8, // Bottom-right
+  -0.6, 0, 4.8, // Bottom-left
+  // side top - top
+  -0.8, 0, -0.7, // Top-left
+  0.8, 0, -0.7, // Top-right
+  1, -0.5, -1, // Bottom-right
+  -1, -0.5, -1, // Bottom-left
+  // side top - left
+  -0.8, 0, -0.7, // Top-left
+  -1.6, 0, 1, // Top-right
+  -2, -0.5, 1, // Bottom-right
+  -1, -0.5, -1, // Bottom-left
+  // side top - right
+  0.8, 0, -0.7, // Top-left
+  1.6, 0, 1, // Top-right
+  2, -0.5, 1, // Bottom-right
+  1, -0.5, -1, // Bottom-left
+  // side bottom - right
+  1.6, 0, 1, // Top-left
+  0.6, 0, 4.8, // Top-right
+  1, -0.5, 5, // Bottom-right
+  2, -0.5, 1, // Bottom-left
+  // side bottom - left
+  -1.6, 0, 1, // Top-left
+  -0.6, 0, 4.8, // Top-right
+  -1, -0.5, 5, // Bottom-right
+  -2, -0.5, 1, // Bottom-left
+  // bottom bottom
+  -0.6, 0, 4.8, // Top-left
+  0.6, 0, 4.8, // Top-right
+  1, -0.5, 5, // Bottom-right
+  -1, -0.5, 5, // Bottom-left
+
+  // lid side bottom
+  -1, -2, 5, // Top-left
+  1, -2, 5, // Top-right
+  1, -0.5, 5, // Bottom-right
+  -1, -0.5, 5, // Bottom-left
+
+  // lid top
+  -1, -2, -1, // Top-left
+  1, -2, -1, // Top-right
+  1, -0.5, -1, // Bottom-right
+  -1, -0.5, -1, // Bottom-left
+
+  // bottom top
+  -1, -2, -1, // Top-left
+  1, -2, -1, // Top-right
+  2, -2, 1, // Bottom-right
+  -2, -2, 1, // Bottom-left
+  // bottom bottom
+  -2, -2, 1, // Top-left
+  2, -2, 1, // Top-right
+  1, -2, 5, // Bottom-right
+  -1, -2, 5, // Bottom-left
+
+  // bottom side
+  -1, -2, -1, // Top-left
+  -2, -2, 1, // Top-right
+  -2, -0.5, 1, // Bottom-right
+  -1, -0.5, -1, // Bottom-left
+
+  // bottom side
+  1, -2, -1, // Top-left
+  2, -2, 1, // Top-right
+  2, -0.5, 1, // Bottom-right
+  1, -0.5, -1, // Bottom-left
+
+  // bottom lid left
+  -2, -2, 1, // Top-left
+  -1, -2, 5, // bottom-right
+  -1, -0.5, 5, // tôp-right
+  -2, -0.5, 1, // Bottom-left
+
+  // bottom lid right
+  2, -2, 1, // Top-left
+  1, -2, 5, // bottom-right
+  1, -0.5, 5, // tôp-right
+  2, -0.5, 1, // Bottom-left
+];
+
+// Define indices of the door
+const indices = [
+  // top
+  0, 1, 2,
+  0, 2, 3,
+  // bottom
+  4, 5, 6,
+  4, 6, 7,
+  // side top
+  8, 9, 10,
+  8, 10, 11,
+  // side left
+  12, 13, 14,
+  12, 14, 15,
+  // side right
+  16, 17, 18,
+  16, 18, 19,
+  // side bottom right
+  20, 21, 22,
+  20, 22, 23,
+  // side bottom left
+  24, 25, 26,
+  24, 26, 27,
+  // bottom side
+  28, 29, 30,
+  28, 30, 31,
+
+  // lid side bottom
+  32, 33, 34,
+  32, 34, 35,
+  // lid top
+  36, 37, 38,
+  36, 38, 39,
+  // bottom top
+  40, 41, 42,
+  40, 42, 43,
+  // bottom bottom
+  44, 45, 46,
+  44, 46, 47,
+  // bottom side
+  48, 49, 50,
+  48, 50, 51,
+  // bottom side
+  52, 53, 54,
+  52, 54, 55,
+  // bottom lid left
+  56, 57, 58,
+  56, 58, 59,
+  // bottom lid right
+  60, 61, 62,
+  60, 62, 63,
+];
+
+// camera.position.set(0, 5, 5);
+
+// Create attributes for vertices and indices
+// geometry.setIndex(indices);
+// geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+// geometry.computeVertexNormals();
+geometry.setAttribute('position', new THREE.BufferAttribute(new
+  Float32Array(vertices), 3));
+geometry.setIndex(new THREE.BufferAttribute(new
+  Uint16Array(indices), 1));
+
+// Add UVs if you want to apply a texture
+let uv = [];
+for (let i = 0; i < vertices.length / 2; i++) {
+  uv.push(i % 2, 1 - Math.floor(i / 2) / 2);
+}
+geometry.setAttribute('uv', new THREE.BufferAttribute(new
+  Float32Array(uv), 2));
+
+// let material = new THREE.ShaderMaterial({
+//   uniforms,
+//   vertexShader: planeVertexShader,
+//   fragmentShader: planeFragmentShader,
+//   side: THREE.DoubleSide,
+//   transparent: true,
+//   // wireframe: true
+// });
+texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+// let material = new THREE.MeshBasicMaterial({
+//   map: texture,
+//   side: THREE.DoubleSide
+// });
+let material = new THREE.MeshStandardMaterial({
+  map: texture,
+  side: THREE.DoubleSide,
+  color: 0x7d77ed
+});
+// Create the mesh
+let coffin = new THREE.Mesh(geometry, material);
+
+// add a cross to the coffin door from planes
+const cross = new THREE.Group();
+const crossMaterial = new THREE.MeshStandardMaterial({ color: 0x000000, side: THREE.DoubleSide, emissive: 0xffffff, emissiveIntensity: 0.8 });
+const cross1 = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 4, 32), crossMaterial);
+cross1.rotation.x = Math.PI / 2;
+cross1.position.set(0, 0.1, 2);
+cross.add(cross1);
+const cross2 = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 2, 32), crossMaterial);
+cross2.rotation.x = Math.PI / 2;
+cross2.rotation.z = Math.PI / 2;
+cross2.position.set(0, 0.1, 1);
+coffin.add(cross);
+coffin.add(cross2);
+// Add the mesh to the scene
+scene.add(coffin);
+coffin.position.set(0, 2, 1);
+coffin.rotation.x = Math.PI / 2;
+// add light to the scene
+const light = new THREE.AmbientLight(0xffffff, 0.5);
+scene.add(light);
+
+// center the scene
+scene.position.set(settings.scene.position.x, settings.scene.position.y, settings.scene.position.z);
 
 /**
  * add starts to the scene
@@ -94,64 +302,11 @@ for (let i = 0; i < 100; i++) {
 scene.add(stars)
 
 // add planes to the scene
-
-const planeGeo = new THREE.PlaneGeometry(40, 40, 30, 30)
-const planeMat = new THREE.ShaderMaterial({
-  uniforms,
-  vertexShader: planeVertexShader,
-  fragmentShader: planeFragmentShader,
-})
-planeMat.transparent = true
-planeMat.opacity = 0.1
-planeMat.wireframe = true
-
-const planes = {
-  bottom: undefined,
-  top: undefined,
-  left: undefined,
-  right: undefined,
-  back: undefined,
-  front: undefined,
-}
-// create 6 planes to make a box
-planes.bottom = new THREE.Mesh(planeGeo, planeMat) // bottom
-planes.bottom.rotation.x = Math.PI / 2
-planes.bottom.position.set(0, -20, 0)
-
-planes.top = new THREE.Mesh(planeGeo, planeMat) // top
-planes.top.rotation.x = -Math.PI / 2
-planes.top.position.set(0, 20, 0)
-
-planes.left = new THREE.Mesh(planeGeo, planeMat) // left
-planes.left.rotation.y = Math.PI / 2
-planes.left.position.set(-20, 0, 0)
-
-planes.right = new THREE.Mesh(planeGeo, planeMat) // right
-planes.right.rotation.y = -Math.PI / 2
-planes.right.position.set(20, 0, 0)
-
-planes.back = new THREE.Mesh(planeGeo, planeMat) // back
-planes.back.rotation.y = Math.PI
-planes.back.position.set(0, 0, -20)
-
-planes.front = new THREE.Mesh(planeGeo, planeMat) // front
-planes.front.position.set(0, 0, 20)
-
-const planeGroup = new THREE.Group()
-for (const plane in planes) {
-  planeGroup.add(planes[plane])
-}
-// add a center point to the scene
-const center = new THREE.Vector3(0, 0, 0);
-planeGroup.position.copy(center);
+const planeGroup = initPlanes(uniforms)
 scene.add(planeGroup);
 
-// const listener = new THREE.AudioListener()
-// camera.add(listener)
-
-let isButtonPressed = false
-
 let audioContext, analyser
+let isButtonPressed = false
 const toggleButton = document.createElement("input")
 toggleButton.type = "button"
 toggleButton.value = "Toggle Audio Input"
@@ -200,29 +355,7 @@ toggleButton.addEventListener("click", function (e) {
   }
 })
 
-const gui = new GUI()
-
-const colorsFolder = gui.addFolder("Colors")
-colorsFolder.add(params, "red", 0, 1).onChange(function (value) {
-  uniforms.u_red.value = Number(value)
-})
-colorsFolder.add(params, "green", 0, 1).onChange(function (value) {
-  uniforms.u_green.value = Number(value)
-})
-colorsFolder.add(params, "blue", 0, 1).onChange(function (value) {
-  uniforms.u_blue.value = Number(value)
-})
-
-const bloomFolder = gui.addFolder("Bloom")
-bloomFolder.add(params, "threshold", 0, 1).onChange(function (value) {
-  bloomPass.threshold = Number(value)
-})
-bloomFolder.add(params, "strength", 0, 3).onChange(function (value) {
-  bloomPass.strength = Number(value)
-})
-bloomFolder.add(params, "radius", 0, 1).onChange(function (value) {
-  bloomPass.radius = Number(value)
-})
+const gui = initGui(camera, bloomPass, uniforms, params, scene)
 
 let mouseX = 0
 let mouseY = 0
@@ -232,12 +365,22 @@ document.addEventListener("mousemove", function (e) {
   mouseX = (e.clientX - windowHalfX) / 100
   mouseY = (e.clientY - windowHalfY) / 100
 })
-mesh.rotation.x = Math.PI
+const controls = new OrbitControls(camera, renderer.domElement)
 const clock = new THREE.Clock()
+
+// animate function
 function animate() {
+  requestAnimationFrame(animate)
+
+  crossMaterial.emissiveIntensity = Math.max(1, Math.abs(Math.sin(clock.getElapsedTime() * 0.5)) * 2)
+  crossMaterial.emissive = new THREE.Color(`hsl(${Math.abs(Math.sin(clock.getElapsedTime() * 0.5) * 360)}, 90%, 80%)`)
+
+  // ball.update(mouseX, mouseY, clock.getElapsedTime())
+
   uniforms.u_mouse.value.x = mouseX
   uniforms.u_mouse.value.y = mouseY
   uniforms.u_time.value = clock.getElapsedTime()
+
   if (analyser) {
     const dataArray = new Uint8Array(analyser.frequencyBinCount)
     analyser.getByteFrequencyData(dataArray)
@@ -246,22 +389,13 @@ function animate() {
     uniforms.u_frequency.value = averageFrequency
   }
 
-  // rotate planes around the scene
-  planeGroup.rotation.y -= (0.00001 + mouseX * 0.0005)
-  planeGroup.rotation.x -= (0.00001 + mouseY * 0.0005)
+  // update gui values
+  gui.updateDisplay()
 
-  // rotate the sphere
-  mesh.rotation.x -= 0.0001 + mouseX * 0.0005
-  mesh.rotation.y -= 0.0001 + mouseY * 0.0005
-  mesh.rotation.z -= 0.0001 + mouseY * mouseX * 0.0005
-
-
-
-  camera.position.x += (mouseX - camera.position.x) * 0.05
-  camera.position.y += (-mouseY - camera.position.y) * 0.5
-  camera.lookAt(scene.position)
+  // camera.position.x += (mouseX - camera.position.x) * 0.05
+  // camera.position.y += (-mouseY - camera.position.y) * 0.5
+  // camera.lookAt(scene.position)
   bloomComposer.render()
-  requestAnimationFrame(animate)
 }
 animate()
 
