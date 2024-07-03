@@ -1,0 +1,11 @@
+Model Information:
+* title:	Skull
+* source:	https://sketchfab.com/3d-models/skull-83bcc0af08774ef0b65ef2d3d815fe75
+* author:	miladm31 (https://sketchfab.com/miladm31)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Skull" (https://sketchfab.com/3d-models/skull-83bcc0af08774ef0b65ef2d3d815fe75) by miladm31 (https://sketchfab.com/miladm31) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

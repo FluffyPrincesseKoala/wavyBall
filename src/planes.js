@@ -11,6 +11,7 @@ export default function createPlanes(uniforms) {
         vertexShader: planeVertexShader,
         fragmentShader: planeFragmentShader,
     })
+    // planeMat.color = new THREE.Color(0x000000)
     planeMat.transparent = true
     planeMat.opacity = 0.1
     planeMat.wireframe = true
